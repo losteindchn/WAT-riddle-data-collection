@@ -26,6 +26,7 @@ def load_embedding():
             return f.readlines()
 
 # ------------------ Model ------------------
+# ------------------ Model ------------------
 class SimpleConnectionModel:
     def __init__(self, coord_lines):
         lines = iter(coord_lines)
@@ -36,13 +37,15 @@ class SimpleConnectionModel:
         self.R = float(next(lines).strip().split()[3])
 
         # Names, kappa, theta
-        arr = np.loadtxt(coord_lines[11:], dtype=str)  # 从第12行开始是数据
+        import io
+        arr = np.loadtxt(io.StringIO("\n".join(coord_lines[11:])), dtype=str)
         self.names = arr[:,0]
         self.kappa = arr[:,1].astype(float)
         self.theta = arr[:,2].astype(float)
         self.name_to_idx = {name: i for i, name in enumerate(self.names)}
 
         self.LARGE_NUMBER = 1e10
+
 
     def raw_hyperbolic_distance(self, v1, v2):
         i1 = self.name_to_idx.get(v1, -1)
