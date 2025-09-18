@@ -35,7 +35,7 @@ class SimpleConnectionModel:
         if -1 in (i1,i2): return self.LARGE_NUMBER
         dtheta = np.pi - np.abs(np.pi - np.abs(self.theta[i1]-self.theta[i2]))
         return np.clip((self.R*dtheta)/(self.mu*self.kappa[i1]*self.kappa[i2]),0,self.LARGE_NUMBER)
-    def scale_probability(self,raw,stretch_factor=200,min_val=0.05,max_val=0.95):
+    def scale_probability(self,raw,stretch_factor=200,min_val=0.001,max_val=0.999):
         raw=np.clip(raw,1e-12,1-1e-12); t=1/(1+np.exp(-stretch_factor*(raw-0.002)))
         return np.clip(min_val+(max_val-min_val)*t,min_val,max_val)
     def connection_probability(self,v1,v2,return_raw=False):
@@ -43,7 +43,7 @@ class SimpleConnectionModel:
             dist=self.raw_hyperbolic_distance(v1,v2)
             raw=1/(1+dist**self.beta); scaled=self.scale_probability(raw)
             return (raw,scaled) if return_raw else scaled
-        except: return (1e-8,0.05) if return_raw else 0.05
+        except: return (1e-8,0.001) if return_raw else 0.001
 
 # ------------------ Google Sheets ------------------
 def init_gsheet():
