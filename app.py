@@ -5,15 +5,18 @@ from datetime import datetime
 
 # ------------------ Load riddles ------------------
 def load_riddles():
-    return json.loads(st.secrets["riddles"]) if "riddles" in st.secrets else json.load(open("riddles.json","r",encoding="utf-8"))
+    if "riddles" not in st.secrets:
+        raise RuntimeError("❌ Missing riddles in secrets.toml")
+    return json.loads(st.secrets["riddles"])
 
 # ------------------ Load embedding ------------------
+
 def load_embedding():
-    if "embedding_base64" in st.secrets:
-        compressed = base64.b64decode(st.secrets["embedding_base64"])
-        return gzip.decompress(compressed).decode("utf-8").splitlines()
-    else:
-        return open("edge_list_ZH.inf_coord","r").readlines()
+    if "embedding_base64" not in st.secrets:
+        raise RuntimeError("❌ Missing embedding_base64 in secrets.toml")
+    compressed = base64.b64decode(st.secrets["embedding_base64"])
+    return gzip.decompress(compressed).decode("utf-8").splitlines()
+
 
 # ------------------ Model ------------------
 class SimpleConnectionModel:
