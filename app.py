@@ -10,13 +10,11 @@ def load_riddles():
     return json.loads(st.secrets["riddles"])
 
 # ------------------ Load embedding ------------------
-
 def load_embedding():
     if "embedding_base64" not in st.secrets:
         raise RuntimeError("❌ Missing embedding_base64 in secrets.toml")
     compressed = base64.b64decode(st.secrets["embedding_base64"])
     return gzip.decompress(compressed).decode("utf-8").splitlines()
-
 
 # ------------------ Model ------------------
 class SimpleConnectionModel:
@@ -30,20 +28,19 @@ class SimpleConnectionModel:
         self.names, self.kappa, self.theta = arr[:,0], arr[:,1].astype(float), arr[:,2].astype(float)
         self.name_to_idx = {n:i for i,n in enumerate(self.names)}
         self.LARGE_NUMBER = 1e10
+
     def raw_hyperbolic_distance(self,v1,v2):
         i1,i2 = self.name_to_idx.get(v1,-1), self.name_to_idx.get(v2,-1)
         if -1 in (i1,i2): return self.LARGE_NUMBER
         dtheta = np.pi - np.abs(np.pi - np.abs(self.theta[i1]-self.theta[i2]))
         return np.clip((self.R*dtheta)/(self.mu*self.kappa[i1]*self.kappa[i2]),0,self.LARGE_NUMBER)
-    def scale_probability(self,raw,stretch_factor=200,min_val=0.001,max_val=0.999):
-        raw=np.clip(raw,1e-12,1-1e-12); t=1/(1+np.exp(-stretch_factor*(raw-0.002)))
-        return np.clip(min_val+(max_val-min_val)*t,min_val,max_val)
-    def connection_probability(self,v1,v2,return_raw=False):
+
+    def connection_probability(self,v1,v2):
         try:
             dist=self.raw_hyperbolic_distance(v1,v2)
-            raw=1/(1+dist**self.beta); scaled=self.scale_probability(raw)
-            return (raw,scaled) if return_raw else scaled
-        except: return (1e-8,0.001) if return_raw else 0.001
+            return 1/(1+dist**self.beta)   # 只返回 raw 概率
+        except:
+            return 1e-12   # 出错时返回极小概率
 
 # ------------------ Google Sheets ------------------
 def init_gsheet():
@@ -52,7 +49,9 @@ def init_gsheet():
         ["https://spreadsheets.google.com/feeds","https://www.googleapis.com/auth/drive"]
     )
     client=gspread.authorize(creds)
-    return client.open_by_url("https://docs.google.com/spreadsheets/d/1wWT-7zbYjA3fdY8L_-OS8wJ7MdQ6UYiOLu-swYKUPBk/edit#gid=0").sheet1
+    return client.open_by_url(
+        "https://docs.google.com/spreadsheets/d/1wWT-7zbYjA3fdY8L_-OS8wJ7MdQ6UYiOLu-swYKUPBk/edit#gid=0"
+    ).sheet1
 
 # ------------------ Load ------------------
 riddles=load_riddles(); model=SimpleConnectionModel(load_embedding()); sheet=init_gsheet()
@@ -78,7 +77,8 @@ if st.session_state.page=="intro":
             st.session_state.phase1_ids=ids[:8]
             st.session_state.phase2_ids=ids[8:]
             # 记录分配结果
-            sheet.append_row([st.session_state.participant_id,"ORDER",",".join(map(str,ids)),datetime.now().strftime("%Y-%m-%d %H:%M:%S")])
+            sheet.append_row([st.session_state.participant_id,"ORDER",
+                              ",".join(map(str,ids)),datetime.now().strftime("%Y-%m-%d %H:%M:%S")])
             st.session_state.page="anchor_intro"
         else:
             st.warning("请输入ID后才能开始。")
@@ -119,16 +119,19 @@ elif st.session_state.page=="prior":
         st.session_state.current_prior=prior; st.session_state.page="update"
 
 elif st.session_state.page=="update":
-    idx=st.session_state.phase1_ids[st.session_state.index]; data=riddles[idx]; a_word=data["phase1_samples"]; c_words=data["answer_pool"]
-    raw,scaled=zip(*[model.connection_probability(a_word,c,True) for c in c_words])
-    max_raw,max_scaled=np.max(raw),np.max(scaled)
+    idx=st.session_state.phase1_ids[st.session_state.index]; data=riddles[idx]
+    a_word=data["phase1_samples"]; c_words=data["answer_pool"]
+    probs=[model.connection_probability(a_word,c) for c in c_words]
+    max_raw=np.max(probs)
     st.markdown(f"### 谜面 {st.session_state.index+1}（更新阶段）")
-    st.write(f"更新词：**{a_word}** → 最高连接概率：**{max_scaled:.3f}**")
+    st.write(f"更新词：**{a_word}** → 最高连接概率：**{max_raw:.6f}**")
     updated=st.slider("更新后的概率",0.0,1.0,0.5,0.01); conf=st.slider("信心程度",0.0,1.0,0.5,0.01)
     if st.button("提交"):
         timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        sheet.append_row([st.session_state.participant_id,idx,"ANCHOR",data["riddle_text"],data["anchor_word"],a_word,
-                          ",".join(c_words),st.session_state.current_prior,max_raw,max_scaled,updated,conf,timestamp])
+        sheet.append_row([st.session_state.participant_id,idx,"ANCHOR",
+                          data["riddle_text"],data["anchor_word"],a_word,
+                          ",".join(c_words),st.session_state.current_prior,
+                          max_raw,"",updated,conf,timestamp])
         st.session_state.index+=1
         if st.session_state.index>=len(st.session_state.phase1_ids):
             st.session_state.page="explore_intro"
@@ -143,13 +146,15 @@ elif st.session_state.page=="explore":
     if st.button("提交探索词"):
         if not word.strip(): st.warning("请输入一个词。")
         else:
-            raw,scaled=zip(*[model.connection_probability(word,c,True) for c in data["answer_pool"]])
-            max_raw,max_scaled=np.max(raw),np.max(scaled)
-            st.write(f"反馈：**{word}** 与谜底最高连接概率 = {max_scaled:.3f}")
+            probs=[model.connection_probability(word,c) for c in data["answer_pool"]]
+            max_raw=np.max(probs)
+            st.write(f"反馈：**{word}** 与谜底最高连接概率 = {max_raw:.6f}")
             timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             st.session_state.explore_count+=1
-            sheet.append_row([st.session_state.participant_id,idx,"EXPLORE",data["riddle_text"],"",word,
-                              ",".join(data["answer_pool"]), "",max_raw,max_scaled,"",timestamp,st.session_state.explore_count])
+            sheet.append_row([st.session_state.participant_id,idx,"EXPLORE",
+                              data["riddle_text"],"",word,
+                              ",".join(data["answer_pool"]),"",max_raw,"",
+                              "",timestamp,st.session_state.explore_count])
             # stop conditions
             if word in data["answer_pool"] or st.session_state.explore_count>=30 or (time.time()-st.session_state.explore_start>600):
                 st.success("该题探索结束！")
