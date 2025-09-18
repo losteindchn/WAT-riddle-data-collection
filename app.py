@@ -118,14 +118,14 @@ elif st.session_state.page=="prior":
 elif st.session_state.page=="update":
     idx=st.session_state.phase1_ids[st.session_state.index]; data=riddles[idx]; a_word=data["phase1_samples"]; c_words=data["answer_pool"]
     raw,scaled=zip(*[model.connection_probability(a_word,c,True) for c in c_words])
-    mean_raw,mean_scaled=np.mean(raw),np.mean(scaled)
+    max_raw,max_scaled=np.max(raw),np.max(scaled)
     st.markdown(f"### 谜面 {st.session_state.index+1}（更新阶段）")
-    st.write(f"更新词：**{a_word}** → 平均连接概率：**{mean_scaled:.3f}**")
+    st.write(f"更新词：**{a_word}** → 最高连接概率：**{max_scaled:.3f}**")
     updated=st.slider("更新后的概率",0.0,1.0,0.5,0.01); conf=st.slider("信心程度",0.0,1.0,0.5,0.01)
     if st.button("提交"):
         timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         sheet.append_row([st.session_state.participant_id,idx,"ANCHOR",data["riddle_text"],data["anchor_word"],a_word,
-                          ",".join(c_words),st.session_state.current_prior,mean_raw,mean_scaled,updated,conf,timestamp])
+                          ",".join(c_words),st.session_state.current_prior,max_raw,max_scaled,updated,conf,timestamp])
         st.session_state.index+=1
         if st.session_state.index>=len(st.session_state.phase1_ids):
             st.session_state.page="explore_intro"
@@ -141,12 +141,12 @@ elif st.session_state.page=="explore":
         if not word.strip(): st.warning("请输入一个词。")
         else:
             raw,scaled=zip(*[model.connection_probability(word,c,True) for c in data["answer_pool"]])
-            mean_raw,mean_scaled=np.mean(raw),np.mean(scaled)
-            st.write(f"反馈：**{word}** 与谜底平均连接概率 = {mean_scaled:.3f}")
+            max_raw,max_scaled=np.max(raw),np.max(scaled)
+            st.write(f"反馈：**{word}** 与谜底最高连接概率 = {max_scaled:.3f}")
             timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             st.session_state.explore_count+=1
             sheet.append_row([st.session_state.participant_id,idx,"EXPLORE",data["riddle_text"],"",word,
-                              ",".join(data["answer_pool"]), "",mean_raw,mean_scaled,"",timestamp,st.session_state.explore_count])
+                              ",".join(data["answer_pool"]), "",max_raw,max_scaled,"",timestamp,st.session_state.explore_count])
             # stop conditions
             if word in data["answer_pool"] or st.session_state.explore_count>=30 or (time.time()-st.session_state.explore_start>600):
                 st.success("该题探索结束！")
@@ -154,3 +154,4 @@ elif st.session_state.page=="explore":
                 if st.session_state.index>=len(st.session_state.phase2_ids):
                     st.success("🎉 所有谜题完成！")
                 else: st.session_state.page="explore"
+
