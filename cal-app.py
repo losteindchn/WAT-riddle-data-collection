@@ -4,6 +4,12 @@ from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 from scipy.optimize import curve_fit
 
+# ------------------ Calibration words ------------------
+calib_words = [
+    "日历","医生","手机","河流","汽车","大学","父亲","节日","音乐","动物",
+    "桌子","书本","飞机","电脑","花","老师","孩子","城市","星星","鞋子"
+]
+
 # ------------------ Load riddles ------------------
 def load_riddles():
     if "riddles" not in st.secrets:
@@ -74,7 +80,7 @@ if "page" not in st.session_state:
         "participant_id":"","explore_count":0,"explore_start":None,
         "order":[], "phase1_ids":[], "phase2_ids":[],
         "calib_pairs":[], "calib_responses":[],
-        "alpha":1.0, "beta":0.0
+        "alpha":1.0, "beta":0.0, "need_extra":False
     })
 
 # ------------------ Intro ------------------
@@ -88,7 +94,6 @@ if st.session_state.page=="intro":
             st.session_state.order=ids
             st.session_state.phase1_ids=ids[:8]
             st.session_state.phase2_ids=ids[8:]
-            # 记录分配结果
             sheet.append_row([st.session_state.participant_id,"ORDER",
                               ",".join(map(str,ids)),datetime.now().strftime("%Y-%m-%d %H:%M:%S")])
             st.session_state.page="calibration"
@@ -100,35 +105,46 @@ elif st.session_state.page=="calibration":
     st.subheader("Calibration: 语义相关性打分")
     idx = len(st.session_state.calib_responses)
 
-    if idx < 5:  # 做5题校准
-        # 确保有对应的词对
-        if len(st.session_state.calib_pairs) <= idx:
-            rid = random.choice(range(len(riddles)))
-            a_word = riddles[rid]["anchor_word"]
-            c_word = random.choice(riddles[rid]["answer_pool"])
-            p_raw = model.connection_probability(a_word,c_word,calibrated=False)
-            st.session_state.calib_pairs.append((a_word,c_word,p_raw))
+    total_needed = 10 if not st.session_state.need_extra else 15
 
-        a_word,c_word,p_raw = st.session_state.calib_pairs[idx]
-        st.markdown(f"题 {idx+1}/5：**{a_word}** – **{c_word}** (系统计算: {p_raw:.4f})")
+    if idx < total_needed:
+        if len(st.session_state.calib_pairs) <= idx:
+            w1,w2 = random.sample(calib_words,2)
+            if (w1 not in model.name_to_idx) or (w2 not in model.name_to_idx):
+                p_raw = 0.5
+            else:
+                p_raw = model.connection_probability(w1,w2,calibrated=False)
+            st.session_state.calib_pairs.append((w1,w2,p_raw))
+
+        w1,w2,p_raw = st.session_state.calib_pairs[idx]
+        st.markdown(f"题 {idx+1}/{total_needed}：**{w1}** – **{w2}** (系统计算: {p_raw:.4f})")
         resp = st.slider("你觉得它们的相关概率",0.0,1.0,0.5,0.01,key=f"calib_{idx}")
 
-        if st.button("提交并进入下一题"):
+        if st.button("提交并进入下一题", key=f"btn_{idx}"):
             st.session_state.calib_responses.append(resp)
-            st.rerun()  # 立即刷新页面，显示下一题
+            st.rerun()
     else:
-        # 已经做完5题，拟合参数
+        # 拟合参数
         X = np.array([p for _,_,p in st.session_state.calib_pairs])
         y = np.array(st.session_state.calib_responses)
         try:
             popt,_=curve_fit(logit_scaling,X,y,p0=[1.0,0.0],maxfev=10000)
             st.session_state.alpha, st.session_state.beta = popt
+            y_pred = logit_scaling(X,*popt)
+            mse = np.mean((y-y_pred)**2)
         except:
             st.session_state.alpha, st.session_state.beta = 1.0,0.0
-        st.success(f"Calibration完成: α={st.session_state.alpha:.2f}, β={st.session_state.beta:.2f}")
-        if st.button("进入阶段一"):
-            st.session_state.page="anchor_intro"
+            mse = 1.0
+
+        if not st.session_state.need_extra and mse > 0.02:
+            st.warning(f"拟合误差较大 (MSE={mse:.3f})，请再做 5 题校准")
+            st.session_state.need_extra=True
             st.rerun()
+        else:
+            st.success(f"Calibration完成: α={st.session_state.alpha:.2f}, β={st.session_state.beta:.2f} (MSE={mse:.3f})")
+            if st.button("进入阶段一"):
+                st.session_state.page="anchor_intro"
+                st.rerun()
 
 # ------------------ Section 1 intro + checkpoint ------------------
 elif st.session_state.page=="anchor_intro":
