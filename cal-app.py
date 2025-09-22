@@ -101,6 +101,7 @@ elif st.session_state.page=="calibration":
     idx = len(st.session_state.calib_responses)
 
     if idx < 5:  # 做5题校准
+        # 确保有对应的词对
         if len(st.session_state.calib_pairs) <= idx:
             rid = random.choice(range(len(riddles)))
             a_word = riddles[rid]["anchor_word"]
@@ -109,12 +110,14 @@ elif st.session_state.page=="calibration":
             st.session_state.calib_pairs.append((a_word,c_word,p_raw))
 
         a_word,c_word,p_raw = st.session_state.calib_pairs[idx]
-        st.markdown(f"词对：**{a_word}** – **{c_word}** (系统计算: {p_raw:.4f})")
-        resp = st.slider("你觉得它们的相关概率",0.0,1.0,0.5,0.01)
-        if st.button("提交该题"):
+        st.markdown(f"题 {idx+1}/5：**{a_word}** – **{c_word}** (系统计算: {p_raw:.4f})")
+        resp = st.slider("你觉得它们的相关概率",0.0,1.0,0.5,0.01,key=f"calib_{idx}")
+
+        if st.button("提交并进入下一题"):
             st.session_state.calib_responses.append(resp)
+            st.rerun()  # 立即刷新页面，显示下一题
     else:
-        # 拟合 logit scaling
+        # 已经做完5题，拟合参数
         X = np.array([p for _,_,p in st.session_state.calib_pairs])
         y = np.array(st.session_state.calib_responses)
         try:
@@ -123,7 +126,9 @@ elif st.session_state.page=="calibration":
         except:
             st.session_state.alpha, st.session_state.beta = 1.0,0.0
         st.success(f"Calibration完成: α={st.session_state.alpha:.2f}, β={st.session_state.beta:.2f}")
-        st.session_state.page="anchor_intro"
+        if st.button("进入阶段一"):
+            st.session_state.page="anchor_intro"
+            st.rerun()
 
 # ------------------ Section 1 intro + checkpoint ------------------
 elif st.session_state.page=="anchor_intro":
