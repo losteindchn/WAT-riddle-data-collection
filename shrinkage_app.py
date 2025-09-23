@@ -1,34 +1,28 @@
 import streamlit as st
-import json, numpy as np, pandas as pd, gspread, gzip, base64, time, random
+import json, numpy as np, pandas as pd, gspread, time, random
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 
 # ------------------ Load riddles ------------------
 def load_riddles():
-    if "riddles" not in st.secrets:
-        raise RuntimeError("❌ Missing riddles in secrets.toml")
     return json.loads(st.secrets["riddles"])
 
 # ------------------ Load embedding ------------------
 def load_embedding():
-    if "embedding_base64" not in st.secrets:
-        raise RuntimeError("❌ Missing embedding_base64 in secrets.toml")
-    compressed = base64.b64decode(st.secrets["embedding_base64"])
-    return gzip.decompress(compressed).decode("utf-8").splitlines()
+    path = st.secrets["embedding_path"]
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read().splitlines()
 
 # ------------------ Load shrinkage ------------------
 def load_shrinkage(group):
-    if "shrinkage" not in st.secrets:
-        print("⚠️ No shrinkage info in secrets.toml, fallback to weight=1.0")
-        return {}
-    if group not in st.secrets["shrinkage"]:
-        print(f"⚠️ No shrinkage for group {group}, fallback to weight=1.0")
+    shrink_paths = st.secrets.get("shrinkage_paths", {})
+    path = shrink_paths.get(group, None)
+    if path is None or not path.strip():
+        print(f"⚠️ No shrinkage for {group}, fallback to weight=1.0")
         return {}
     try:
-        compressed = base64.b64decode(st.secrets["shrinkage"][group])
-        data = gzip.decompress(compressed).decode("utf-8")
-        shrink_dict = json.loads(data)
-        # keys are "w1||w2"
+        with open(path, "r", encoding="utf-8") as f:
+            shrink_dict = json.load(f)
         return shrink_dict
     except Exception as e:
         print(f"❌ Failed to load shrinkage for {group}: {e}")
@@ -46,8 +40,6 @@ class SimpleConnectionModel:
         self.names, self.kappa, self.theta = arr[:,0], arr[:,1].astype(float), arr[:,2].astype(float)
         self.name_to_idx = {n:i for i,n in enumerate(self.names)}
         self.LARGE_NUMBER = 1e10
-
-        # shrinkage 权重表
         self.shrinkage = shrinkage_weights if shrinkage_weights else {}
         self.cap = cap
 
@@ -61,15 +53,13 @@ class SimpleConnectionModel:
         try:
             dist=self.raw_hyperbolic_distance(v1,v2)
             p_raw = 1/(1+dist**self.beta)
-
-            # 应用 shrinkage 权重
             key = f"{v1}||{v2}"
             w = self.shrinkage.get(key, 1.0)
-            if self.cap:  # 限制极端值
+            if self.cap:
                 w = max(min(w, self.cap), 1.0/self.cap)
             return p_raw * w
         except:
-            return 1e-12   # 出错时返回极小概率
+            return 1e-12
 
 # ------------------ Google Sheets ------------------
 def init_gsheet():
