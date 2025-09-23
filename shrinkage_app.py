@@ -2,6 +2,7 @@ import streamlit as st
 import json, numpy as np, pandas as pd, gspread, gzip, base64, time, random, os
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
+ import math
 
 # ------------------ Load riddles ------------------
 def load_riddles():
@@ -59,17 +60,29 @@ class SimpleConnectionModel:
         dtheta = np.pi - np.abs(np.pi - np.abs(self.theta[i1]-self.theta[i2]))
         return np.clip((self.R*dtheta)/(self.mu*self.kappa[i1]*self.kappa[i2]),0,self.LARGE_NUMBER)
 
-    def connection_probability(self,v1,v2):
+    
+   
+
+    def connection_probability(self, v1, v2):
         try:
-            dist=self.raw_hyperbolic_distance(v1,v2)
+            dist = self.raw_hyperbolic_distance(v1, v2)
             p_raw = 1/(1+dist**self.beta)
             key = f"{v1}||{v2}"
             w = self.shrinkage.get(key, 1.0)
             if self.cap:
                 w = max(min(w, self.cap), 1.0/self.cap)
-            return p_raw * w
-        except:
+
+            # ---- logit 融合 ----
+            if p_raw <= 0:
+                return 1e-12
+            if p_raw >= 1:
+                return 1 - 1e-12
+            logit = math.log(p_raw / (1 - p_raw))
+            p_new = 1 / (1 + math.exp(-(logit + math.log(w))))
+            return p_new
+        except Exception:
             return 1e-12
+
 
 # ------------------ Google Sheets ------------------
 def init_gsheet():
