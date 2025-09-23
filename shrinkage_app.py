@@ -64,24 +64,30 @@ class SimpleConnectionModel:
    
 
     def connection_probability(self, v1, v2):
-        try:
-            dist = self.raw_hyperbolic_distance(v1, v2)
-            p_raw = 1/(1+dist**self.beta)
-            key = f"{v1}||{v2}"
-            w = self.shrinkage.get(key, 1.0)
-            if self.cap:
-                w = max(min(w, self.cap), 1.0/self.cap)
+    # ---- 保证 self-loop 始终为 1 ----
+    if v1 == v2:
+        return 1.0
 
-            # ---- logit 融合 ----
-            if p_raw <= 0:
-                return 1e-12
-            if p_raw >= 1:
-                return 1 - 1e-12
-            logit = math.log(p_raw / (1 - p_raw))
-            p_new = 1 / (1 + math.exp(-(logit + math.log(w))))
-            return p_new
-        except Exception:
+    try:
+        dist = self.raw_hyperbolic_distance(v1, v2)
+        p_raw = 1/(1+dist**self.beta)
+        key = f"{v1}||{v2}"
+        w = self.shrinkage.get(key, 1.0)
+        if self.cap:
+            w = max(min(w, self.cap), 1.0/self.cap)
+
+        # ---- logit 融合 ----
+        if p_raw <= 0:
             return 1e-12
+        if p_raw >= 1:
+            return 1 - 1e-12
+
+        logit = math.log(p_raw / (1 - p_raw))
+        p_new = 1 / (1 + math.exp(-(logit + math.log(w))))
+        return p_new
+    except Exception:
+        return 1e-12
+
 
 
 # ------------------ Google Sheets ------------------
