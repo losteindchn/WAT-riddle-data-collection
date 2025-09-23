@@ -64,9 +64,9 @@ class SimpleConnectionModel:
    
 
     def connection_probability(self, v1, v2):
-    # ---- 保证 self-loop 始终为 1 ----
-    if v1 == v2:
-        return 1.0
+        # ---- 保证 self-loop 始终为 1 ----
+        if v1 == v2:
+            return 1.0
 
     try:
         dist = self.raw_hyperbolic_distance(v1, v2)
