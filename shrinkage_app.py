@@ -1,32 +1,41 @@
 import streamlit as st
-import json, numpy as np, pandas as pd, gspread, time, random
+import json, numpy as np, pandas as pd, gspread, gzip, base64, time, random, os
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 
 # ------------------ Load riddles ------------------
 def load_riddles():
-    return json.loads(st.secrets["riddles"])
+    if "riddles_path" not in st.secrets:
+        raise RuntimeError("❌ Missing riddles_path in secrets.toml")
+    path = st.secrets["riddles_path"]
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 # ------------------ Load embedding ------------------
 def load_embedding():
+    if "embedding_path" not in st.secrets:
+        raise RuntimeError("❌ Missing embedding_path in secrets.toml")
     path = st.secrets["embedding_path"]
     with open(path, "r", encoding="utf-8") as f:
-        return f.read().splitlines()
+        b64 = f.read().strip()
+    compressed = base64.b64decode(b64)
+    return gzip.decompress(compressed).decode("utf-8").splitlines()
 
 # ------------------ Load shrinkage ------------------
 def load_shrinkage(group):
-    shrink_paths = st.secrets.get("shrinkage_paths", {})
-    path = shrink_paths.get(group, None)
-    if path is None or not path.strip():
-        print(f"⚠️ No shrinkage for {group}, fallback to weight=1.0")
+    if "shrinkage_paths" not in st.secrets:
         return {}
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            shrink_dict = json.load(f)
-        return shrink_dict
-    except Exception as e:
-        print(f"❌ Failed to load shrinkage for {group}: {e}")
+    shrinkage_paths = st.secrets["shrinkage_paths"]
+    if group not in shrinkage_paths:
         return {}
+    path = shrinkage_paths[group]
+    if not os.path.exists(path):
+        return {}
+    with open(path, "r", encoding="utf-8") as f:
+        b64 = f.read().strip()
+    compressed = base64.b64decode(b64)
+    data = gzip.decompress(compressed).decode("utf-8")
+    return json.loads(data)
 
 # ------------------ Model ------------------
 class SimpleConnectionModel:
@@ -40,6 +49,7 @@ class SimpleConnectionModel:
         self.names, self.kappa, self.theta = arr[:,0], arr[:,1].astype(float), arr[:,2].astype(float)
         self.name_to_idx = {n:i for i,n in enumerate(self.names)}
         self.LARGE_NUMBER = 1e10
+
         self.shrinkage = shrinkage_weights if shrinkage_weights else {}
         self.cap = cap
 
@@ -75,6 +85,7 @@ def init_gsheet():
 # ------------------ Load ------------------
 riddles = load_riddles()
 sheet = init_gsheet()
+
 
 # ------------------ Session state ------------------
 st.set_page_config(page_title="海龟汤实验",layout="centered")
