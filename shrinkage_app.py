@@ -2,7 +2,7 @@ import streamlit as st
 import json, numpy as np, pandas as pd, gspread, gzip, base64, time, random, os
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
- import math
+import math
 
 # ------------------ Load riddles ------------------
 def load_riddles():
