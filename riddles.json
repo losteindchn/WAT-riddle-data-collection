@@ -1,86 +1,86 @@
 [
+    {
+        "riddle_text": "一个女人正在看电影。突然，她听到外面传来很多爆炸声和人们的尖叫声。 然后是沉默。女人关掉电视，睡着了。",
+        "answer_pool": ["过年"],
+        "anchor_word": "生日",
+        "phase1_samples": "聚餐",
+        "phase2_samples": []
+    },
+    {
+        "riddle_text": "张先生是个喜怒无常的怪人。每天上午他都会高兴的出门，晚上气冲冲地回来。邻居们经常听见他在家里大叫。",
+        "answer_pool": ["青春期"],
+        "anchor_word": "生病",
+        "phase1_samples": "恋爱",
+        "phase2_samples": []
+    },
   {
-    "riddle_text": "一个女人正在看电影。突然，她听到外面传来很多爆炸声和人们的尖叫声。 然后是沉默。女人关掉电视，睡着了。",
-    "answer_pool": ["除夕"],
-    "anchor_word": "生日",
-    "phase1_samples": "日历",
-    "phase2_samples": []
-  },
+        "riddle_text": "一个年轻女子每天都会去一家餐厅吃午餐，她总是点同一道菜，这道菜是由餐厅老板特制的，只有这位女子才能点。",
+        "answer_pool": ["爸爸"],
+        "anchor_word": "亲戚",
+        "phase1_samples": "弟弟",
+        "phase2_samples": []
+    },
   {
-    "riddle_text": "张先生是个喜怒无常的怪人。每天上午他都会高兴的出门，晚上气冲冲地回来。邻居们经常听见他在家里大叫。",
-    "answer_pool": ["青春期"],
-    "anchor_word": "精神病",
-    "phase1_samples": "高中",
-    "phase2_samples": []
-  },
+        "riddle_text": "沙漠中有一个死去的男人，背着背包，面朝下在沙漠中，手上有一个戒指。",
+        "answer_pool": ["跳伞"],
+        "anchor_word": "谋杀",
+        "phase1_samples": "浪花",
+        "phase2_samples": []
+    },
   {
-    "riddle_text": "一个年轻女子每天都会去一家餐厅吃午餐，她总是点同一道菜，这道菜是由餐厅老板特制的，只有这位女子才能点。",
-    "answer_pool": ["爸爸"],
-    "anchor_word": "管家",
-    "phase1_samples": "家庭",
-    "phase2_samples": []
-  },
+        "riddle_text": "一位老人，每周都会去图书馆借书，但是每次借书前都会翻到第30页，这是为什么? ",
+        "answer_pool": ["标记"],
+        "anchor_word": "礼物",
+        "phase1_samples": "检查",
+        "phase2_samples": []
+    },
   {
-    "riddle_text": "沙漠中有一个死去的男人，背着背包，面朝下在沙漠中，手上有一个戒指。",
-    "answer_pool": ["跳伞"],
-    "anchor_word": "谋杀",
-    "phase1_samples": "浪花",
-    "phase2_samples": []
-  },
+        "riddle_text": "一个人从一间屋子里出来，伸手招了辆出租车，然后他再也没能回来这间屋子，请问这是为什么?",
+        "answer_pool": ["盗窃"],
+        "anchor_word": "旅游",
+        "phase1_samples": "警察",
+        "phase2_samples": []
+    },
   {
-    "riddle_text": "一位老人，每周都会去图书馆借书，但是每次借书前都会翻到第30页，这是为什么?",
-    "answer_pool": ["记号"],
-    "anchor_word": "孩子",
-    "phase1_samples": "书签",
-    "phase2_samples": []
-  },
+        "riddle_text": "一个人离他的车有30米，但是他只走了五步就上车了，这是为什么?",
+        "answer_pool": ["电梯"],
+        "anchor_word": "飞机",
+        "phase1_samples": "楼梯",
+        "phase2_samples": []
+    },
   {
-    "riddle_text": "一个人从一间屋子里出来，伸手招了辆出租车，然后他再也没能回来这间屋子，请问这是为什么?",
-    "answer_pool": ["小偷"],
-    "anchor_word": "搬家",
-    "phase1_samples": "警察",
-    "phase2_samples": []
-  },
+        "riddle_text": "一个人半夜醒来打了自己一巴掌，然后闻着一股燃烧的味道安心睡去了，请问发生了什么?",
+        "answer_pool": ["蚊子"],
+        "anchor_word": "火灾",
+        "phase1_samples": "翅膀",
+        "phase2_samples": []
+    },
   {
-    "riddle_text": "一个人离他的车有30米，但是他只走了五步就上车了，这是为什么?",
-    "answer_pool": ["电梯"],
-    "anchor_word": "飞机",
-    "phase1_samples": "上面",
-    "phase2_samples": []
-  },
+        "riddle_text": "哥哥好后悔，如果那天自己吃了冰淇凌，弟弟就不会死了。",
+        "answer_pool": ["冰箱"],
+        "anchor_word": "感冒",
+        "phase1_samples": "温度",
+        "phase2_samples": []
+    },
   {
-    "riddle_text": "一个人半夜醒来打了自己一巴掌，然后闻着一股燃烧的味道安心睡去了，请问发生了什么?",
-    "answer_pool": ["蚊子"],
-    "anchor_word": "愤怒",
-    "phase1_samples": "血液",
-    "phase2_samples": []
-  },
+        "riddle_text": "“我要做个好孩子，我是个好孩子…”我不停对自己说道。新闻报道了一起凶杀案，凶手至今下落不明…",
+        "answer_pool": ["狗狗"],
+        "anchor_word": "拐卖",
+        "phase1_samples": "汪汪",
+        "phase2_samples": []
+    },
   {
-    "riddle_text": "哥哥好后悔，如果那天自己吃了冰淇凌，弟弟就不会死了。",
-    "answer_pool": ["冰柜"],
-    "anchor_word": "感冒",
-    "phase1_samples": "平衡",
-    "phase2_samples": []
-  },
+        "riddle_text": "田野中央有一根胡萝卜、一堆鹅卵石和两根管子。",
+        "answer_pool": ["雪人"],
+        "anchor_word": "工具",
+        "phase1_samples": "温度",
+        "phase2_samples": []
+    },
   {
-    "riddle_text": "“我要做个好孩子，我是个好孩子…”我不停对自己说道。新闻报道了一起凶杀案，凶手至今下落不明…",
-    "answer_pool": ["狗狗"],
-    "anchor_word": "悬崖",
-    "phase1_samples": "责任",
-    "phase2_samples": []
-  },
-  {
-    "riddle_text": "田野中央有一根胡萝卜、一堆鹅卵石和两根管子。",
-    "answer_pool": ["雪人"],
-    "anchor_word": "园艺",
-    "phase1_samples": "温度",
-    "phase2_samples": []
-  },
-  {
-    "riddle_text": "杰克带着他的指南针去旅行。走了很长一段路后，之后他再也找不到回去的路了。",
-    "answer_pool": ["北极"],
-    "anchor_word": "失明",
-    "phase1_samples": "地理",
-    "phase2_samples": []
-  }
+        "riddle_text": "杰克带着他的指南针去旅行。走了很长一段路后，之后他再也找不到回去的路了。",
+        "answer_pool": ["北极"],
+        "anchor_word": "受伤",
+        "phase1_samples": "地球",
+        "phase2_samples": []
+    }
 ]
