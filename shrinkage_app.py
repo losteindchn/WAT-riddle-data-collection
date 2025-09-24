@@ -214,9 +214,11 @@ elif st.session_state.page=="prior":
     st.markdown(f"### 谜面 {st.session_state.index+1}")
     st.markdown(data["riddle_text"]); st.markdown(f"🔹 锚点词：**{data['anchor_word']}**")
     show_glossary(stage="anchor")
-    prior = st.slider("你认为它和谜底相关的程度是",0.0,1.0,0.5,0.01)
+    # 用百分比 slider
+    prior = st.slider("你认为它和谜底相关的程度是", 0, 100, 50, 1, format="%d%%")
     if st.button("下一步"):
-        st.session_state.current_prior = prior; st.session_state.page="update"
+        st.session_state.current_prior = prior / 100.0   # 存储为小数
+        st.session_state.page="update"
 
 elif st.session_state.page=="update":
     model = st.session_state.model
@@ -225,15 +227,17 @@ elif st.session_state.page=="update":
     probs = [model.connection_probability(a_word,c) for c in c_words]
     max_raw = np.max(probs)
     st.markdown(f"### 谜面 {st.session_state.index+1}（更新阶段）")
+    
     st.write(f"更新词：**{a_word}** → 它和谜底的相关程度是：**{format_prob(max_raw)}**")
     show_glossary(stage="anchor")
-    updated = st.slider("提示过后，你现在认为它和谜底的相关程度",0.0,1.0,0.5,0.01); conf = st.slider("信心程度",0.0,1.0,0.5,0.01)
+    updated = st.slider("提示过后，你现在认为它和谜底的相关程度",0, 100, 50, 1, format="%d%%"); conf = st.slider("信心程度",0, 100, 50, 1, format="%d%%")
     if st.button("提交"):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         sheet.append_row([st.session_state.participant_id,idx,"ANCHOR",
                           data["riddle_text"],data["anchor_word"],a_word,
                           ",".join(c_words),st.session_state.current_prior,
-                          max_raw,"",updated,conf,timestamp])
+                          max_raw,"",updated/100.0,conf/100.0,timestamp])
+        
         st.session_state.index += 1
         st.session_state.page = "explore_intro" if st.session_state.index>=len(st.session_state.phase1_ids) else "prior"
 
