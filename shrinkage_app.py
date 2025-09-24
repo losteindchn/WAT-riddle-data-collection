@@ -94,15 +94,22 @@ def init_gsheet():
     ).sheet1
 
 # ------------------ Glossary ------------------
-def show_glossary():
+def show_glossary(stage="both"):
     with st.expander("📖 名词解释（点击展开）"):
-        st.markdown("""
-        - **锚点词**：系统提供的一个参考词，你需要判断它是否可能是谜底。  
-        - **谜底词**：谜题真正的答案词。  
-        - **更新词**：系统在更新阶段提供的新词，它和谜底的连接概率会影响你的判断。  
-        - **连接概率**：模型计算出的两个词语之间的语义相关程度，范围在 **0.0 ~ 1.0** 之间。  
-        - **输入要求**：探索词必须是**单个中文词语**（如“警察”、“书签”），不要输入句子或符号。  
-        """)
+        if stage == "anchor":
+            st.markdown("""
+            - **锚点词**：系统提供的一个已知词，你需要判断它是否可能是谜底。  
+            - **谜底词**：未知词，谜题真正的答案词（通常是名词或动词）。  
+            - **更新词**：系统在更新阶段提供的新词，我们会提供它和谜底的连接概率，作为提示信息。  
+            - **连接概率**：模型计算出的两个词语之间的语义相关程度，范围在 **0.0 ~ 1.0** 之间。  
+            """)
+        else:
+            st.markdown(""" 
+            - **谜底词**：谜题真正的答案词。  
+            - **探索词**：你自己选择的词，系统会计算它和谜底的连接概率，作为你获得的提示。  
+            - **连接概率**：模型计算出的两个词语之间的语义相关程度，范围在 **0.0 ~ 1.0** 之间。  
+            - **输入要求**：探索词是你对谜底或和谜底相关的词的猜测，必须是**单个中文词语**（如“警察”、“书签”），不要输入句子或符号。  
+            """)
 
 # ------------------ Load ------------------
 riddles = load_riddles()
@@ -127,10 +134,13 @@ if st.session_state.page=="intro":
     👋 欢迎参加本实验！
 
     在本实验中，你将会看到一系列“海龟汤”谜题。  
-    - **阶段一**：系统会给你一个谜面和一个锚点词，请你判断它和谜底的关系，并填写概率。  
+    - **阶段一**：系统会给你一个谜面和一个锚点词（以及一个提示），请你判断它和谜底的关系，并填写概率。  
     - **阶段二**：你可以自由输入词语，系统会反馈这些词和谜底的“连接概率”，帮助你探索。  
+      阶段二每道题**最多输入 30 个探索词**，或直到找到谜底为止。  
 
-    🕒 **实验时长**：大约 20 分钟左右。  
+    🕒 **实验时长**：大约 40 分钟左右。  
+
+    ⚠️ 提示：如果翻页按钮没有响应，请等待几秒再点击一次。  
     """)
 
     st.session_state.participant_id=st.text_input("请输入实验编号或随机ID")
@@ -168,7 +178,7 @@ if st.session_state.page=="intro":
 elif st.session_state.page=="anchor_intro":
     st.subheader("阶段一：锚定任务")
     st.write("请先完成一个简单检查任务以确认注意力。请输入指定词语：**注意力**")
-    show_glossary()
+    show_glossary(stage="anchor")
     check=st.text_input("请输入：")
     if st.button("继续阶段一"):
         if check.strip()=="注意力":
@@ -181,7 +191,7 @@ elif st.session_state.page=="anchor_intro":
 elif st.session_state.page=="explore_intro":
     st.subheader("阶段二：自由探索任务")
     st.write("请先完成一个简单检查任务以确认注意力。请输入指定词语：**认真**")
-    show_glossary()
+    show_glossary(stage="both")
     check=st.text_input("请输入：")
     if st.button("继续阶段二"):
         if check.strip()=="认真":
@@ -198,7 +208,7 @@ elif st.session_state.page=="prior":
     idx=st.session_state.phase1_ids[st.session_state.index]; data=riddles[idx]
     st.markdown(f"### 谜面 {st.session_state.index+1}"); st.markdown(data["riddle_text"])
     st.markdown(f"🔹 锚点词：**{data['anchor_word']}**")
-    show_glossary()
+    show_glossary(stage="anchor")
     prior=st.slider("你的先验概率",0.0,1.0,0.5,0.01)
     if st.button("下一步"):
         st.session_state.current_prior=prior; st.session_state.page="update"
@@ -210,8 +220,8 @@ elif st.session_state.page=="update":
     probs=[model.connection_probability(a_word,c) for c in c_words]
     max_raw=np.max(probs)
     st.markdown(f"### 谜面 {st.session_state.index+1}（更新阶段）")
-    st.write(f"更新词：**{a_word}** → 最高连接概率：**{max_raw:.6f}**")
-    show_glossary()
+    st.write(f"更新词：**{a_word}** → 连接概率：**{max_raw:.6f}**")
+    show_glossary(stage="anchor")
     updated=st.slider("更新后的概率",0.0,1.0,0.5,0.01)
     conf=st.slider("信心程度",0.0,1.0,0.5,0.01)
     if st.button("提交"):
@@ -232,7 +242,7 @@ elif st.session_state.page=="explore":
     idx=st.session_state.phase2_ids[st.session_state.index]; data=riddles[idx]
     st.markdown(f"### 谜面 {st.session_state.index+1+len(st.session_state.phase1_ids)}")
     st.markdown(data["riddle_text"])
-    show_glossary()
+    show_glossary(stage="both")
     word=st.text_input("请输入你的探索词")
     if st.button("提交探索词"):
         if not word.strip():
@@ -240,15 +250,19 @@ elif st.session_state.page=="explore":
         else:
             probs=[model.connection_probability(word,c) for c in data["answer_pool"]]
             max_raw=np.max(probs)
-            st.write(f"反馈：**{word}** 与谜底最高连接概率 = {max_raw:.6f}")
+            st.write(f"反馈：**{word}** 与谜底连接概率 = {max_raw:.6f}")
             timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             st.session_state.explore_count+=1
             sheet.append_row([st.session_state.participant_id,idx,"EXPLORE",
                               data["riddle_text"],"",word,
                               ",".join(data["answer_pool"]),"",max_raw,"",
                               "",timestamp,st.session_state.explore_count])
+
             # stop conditions
-            if word in data["answer_pool"] or st.session_state.explore_count>=30 or (time.time()-st.session_state.explore_start>600):
+            finished = (word in data["answer_pool"]) or \
+                       (st.session_state.explore_count>=30) or \
+                       (time.time()-st.session_state.explore_start>600)
+            if finished:
                 st.success("该题探索结束！")
                 st.session_state.index+=1
                 st.session_state.explore_count=0
@@ -256,5 +270,6 @@ elif st.session_state.page=="explore":
                 if st.session_state.index>=len(st.session_state.phase2_ids):
                     st.success("🎉 所有谜题完成！")
                 else:
+                    # 保证进入下一题时不会重复提交
                     st.session_state.page="explore"
 
