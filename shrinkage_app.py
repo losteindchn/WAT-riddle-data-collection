@@ -60,14 +60,10 @@ class SimpleConnectionModel:
         dtheta = np.pi - np.abs(np.pi - np.abs(self.theta[i1]-self.theta[i2]))
         return np.clip((self.R*dtheta)/(self.mu*self.kappa[i1]*self.kappa[i2]),0,self.LARGE_NUMBER)
 
-    
-   
-
     def connection_probability(self, v1, v2):
         # ---- 保证 self-loop 始终为 1 ----
         if v1 == v2:
             return 1.0
-
         try:
             dist = self.raw_hyperbolic_distance(v1, v2)
             p_raw = 1/(1+dist**self.beta)
@@ -75,20 +71,16 @@ class SimpleConnectionModel:
             w = self.shrinkage.get(key, 1.0)
             if self.cap:
                 w = max(min(w, self.cap), 1.0/self.cap)
-    
             # ---- logit 融合 ----
             if p_raw <= 0:
                 return 1e-12
             if p_raw >= 1:
                 return 1 - 1e-12
-    
             logit = math.log(p_raw / (1 - p_raw))
             p_new = 1 / (1 + math.exp(-(logit + math.log(w))))
             return p_new
         except Exception:
             return 1e-12
-
-
 
 # ------------------ Google Sheets ------------------
 def init_gsheet():
@@ -101,10 +93,20 @@ def init_gsheet():
         "https://docs.google.com/spreadsheets/d/1wWT-7zbYjA3fdY8L_-OS8wJ7MdQ6UYiOLu-swYKUPBk/edit#gid=0"
     ).sheet1
 
+# ------------------ Glossary ------------------
+def show_glossary():
+    with st.expander("📖 名词解释（点击展开）"):
+        st.markdown("""
+        - **锚点词**：系统提供的一个参考词，你需要判断它是否可能是谜底。  
+        - **谜底词**：谜题真正的答案词。  
+        - **更新词**：系统在更新阶段提供的新词，它和谜底的连接概率会影响你的判断。  
+        - **连接概率**：模型计算出的两个词语之间的语义相关程度，范围在 **0.0 ~ 1.0** 之间。  
+        - **输入要求**：探索词必须是**单个中文词语**（如“警察”、“书签”），不要输入句子或符号。  
+        """)
+
 # ------------------ Load ------------------
 riddles = load_riddles()
 sheet = init_gsheet()
-
 
 # ------------------ Session state ------------------
 st.set_page_config(page_title="海龟汤实验",layout="centered")
@@ -119,6 +121,18 @@ if "page" not in st.session_state:
 # ------------------ Intro ------------------
 if st.session_state.page=="intro":
     st.title("🧠 海龟汤实验")
+
+    # ---- 导语 ----
+    st.markdown("""
+    👋 欢迎参加本实验！
+
+    在本实验中，你将会看到一系列“海龟汤”谜题。  
+    - **阶段一**：系统会给你一个谜面和一个锚点词，请你判断它和谜底的关系，并填写概率。  
+    - **阶段二**：你可以自由输入词语，系统会反馈这些词和谜底的“连接概率”，帮助你探索。  
+
+    🕒 **实验时长**：大约 20 分钟左右。  
+    """)
+
     st.session_state.participant_id=st.text_input("请输入实验编号或随机ID")
     st.session_state.group=st.selectbox("请选择你的群体",["FH","MH","FN","MN"],index=0)
 
@@ -130,10 +144,17 @@ if st.session_state.page=="intro":
             st.session_state.phase1_ids=ids[:8]
             st.session_state.phase2_ids=ids[8:]
 
-            # 加载 shrinkage
+            # 加载 shrinkage 和 model
             shrink_dict = load_shrinkage(st.session_state.group)
             model = SimpleConnectionModel(load_embedding(), shrinkage_weights=shrink_dict)
             st.session_state.model = model
+
+            # ---- 展示三对示例词的连接概率 ----
+            examples = [("猫","窗户"),("水","草"),("绿色","蔬菜")]
+            st.markdown("### 示例：连接概率演示")
+            for w1,w2 in examples:
+                prob = model.connection_probability(w1,w2)
+                st.write(f"**{w1}** 和 **{w2}** 的连接概率 = {prob:.4f}")
 
             # 记录分配结果
             sheet.append_row([st.session_state.participant_id,"ORDER",
@@ -147,6 +168,7 @@ if st.session_state.page=="intro":
 elif st.session_state.page=="anchor_intro":
     st.subheader("阶段一：锚定任务")
     st.write("请先完成一个简单检查任务以确认注意力。请输入指定词语：**注意力**")
+    show_glossary()
     check=st.text_input("请输入：")
     if st.button("继续阶段一"):
         if check.strip()=="注意力":
@@ -159,6 +181,7 @@ elif st.session_state.page=="anchor_intro":
 elif st.session_state.page=="explore_intro":
     st.subheader("阶段二：自由探索任务")
     st.write("请先完成一个简单检查任务以确认注意力。请输入指定词语：**认真**")
+    show_glossary()
     check=st.text_input("请输入：")
     if st.button("继续阶段二"):
         if check.strip()=="认真":
@@ -175,6 +198,7 @@ elif st.session_state.page=="prior":
     idx=st.session_state.phase1_ids[st.session_state.index]; data=riddles[idx]
     st.markdown(f"### 谜面 {st.session_state.index+1}"); st.markdown(data["riddle_text"])
     st.markdown(f"🔹 锚点词：**{data['anchor_word']}**")
+    show_glossary()
     prior=st.slider("你的先验概率",0.0,1.0,0.5,0.01)
     if st.button("下一步"):
         st.session_state.current_prior=prior; st.session_state.page="update"
@@ -187,7 +211,9 @@ elif st.session_state.page=="update":
     max_raw=np.max(probs)
     st.markdown(f"### 谜面 {st.session_state.index+1}（更新阶段）")
     st.write(f"更新词：**{a_word}** → 最高连接概率：**{max_raw:.6f}**")
-    updated=st.slider("更新后的概率",0.0,1.0,0.5,0.01); conf=st.slider("信心程度",0.0,1.0,0.5,0.01)
+    show_glossary()
+    updated=st.slider("更新后的概率",0.0,1.0,0.5,0.01)
+    conf=st.slider("信心程度",0.0,1.0,0.5,0.01)
     if st.button("提交"):
         timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         sheet.append_row([st.session_state.participant_id,idx,"ANCHOR",
@@ -197,7 +223,8 @@ elif st.session_state.page=="update":
         st.session_state.index+=1
         if st.session_state.index>=len(st.session_state.phase1_ids):
             st.session_state.page="explore_intro"
-        else: st.session_state.page="prior"
+        else:
+            st.session_state.page="prior"
 
 # ------------------ Phase 2: Exploration tasks ------------------
 elif st.session_state.page=="explore":
@@ -205,9 +232,11 @@ elif st.session_state.page=="explore":
     idx=st.session_state.phase2_ids[st.session_state.index]; data=riddles[idx]
     st.markdown(f"### 谜面 {st.session_state.index+1+len(st.session_state.phase1_ids)}")
     st.markdown(data["riddle_text"])
+    show_glossary()
     word=st.text_input("请输入你的探索词")
     if st.button("提交探索词"):
-        if not word.strip(): st.warning("请输入一个词。")
+        if not word.strip():
+            st.warning("请输入一个词。")
         else:
             probs=[model.connection_probability(word,c) for c in data["answer_pool"]]
             max_raw=np.max(probs)
@@ -221,8 +250,11 @@ elif st.session_state.page=="explore":
             # stop conditions
             if word in data["answer_pool"] or st.session_state.explore_count>=30 or (time.time()-st.session_state.explore_start>600):
                 st.success("该题探索结束！")
-                st.session_state.index+=1; st.session_state.explore_count=0; st.session_state.explore_start=time.time()
+                st.session_state.index+=1
+                st.session_state.explore_count=0
+                st.session_state.explore_start=time.time()
                 if st.session_state.index>=len(st.session_state.phase2_ids):
                     st.success("🎉 所有谜题完成！")
-                else: st.session_state.page="explore"
+                else:
+                    st.session_state.page="explore"
 
