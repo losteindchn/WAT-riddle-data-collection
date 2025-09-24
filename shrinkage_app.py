@@ -125,16 +125,16 @@ def show_glossary(stage="both"):
             st.markdown("""
             - **锚点词**：系统提供的一个已知词，你需要判断它是否可能是谜底。  
             - **谜底词**：未知词，谜题真正的答案词。  
-            - **更新词**：系统在更新阶段提供的新词，会展示它和谜底的连接概率。  
-            - **连接概率**：模型计算出的两个词之间的语义相关程度。为了便于理解，这里显示为百分比。  
+            - **更新词**：系统在更新阶段提供的新词，会展示它和谜底的相关程度，来给你提示。  
+            - **相关程度（概率值）**：模型计算出的两个词之间的语义相关程度。为了便于理解，这里显示为百分比。  
             """)
         else:
             st.markdown(""" 
             - **谜底词**：谜题真正的答案词。  
-            - **探索词**：你自己输入的词，系统会反馈它和谜底的连接概率。  
-            - **连接概率**：两个词的语义相关程度，这里显示为百分比（0%~100%）。  
+            - **探索词**：你自己输入的词，系统会反馈它和谜底的相关的程度。  
+            - **相关程度（概率值）**：两个词的语义相关程度，这里显示为百分比（0%~100%）。  
               如果很小，会显示为“≤0.01%”，而不是0。  
-            - **输入要求**：探索词必须是**单个中文词语**（如“警察”、“书签”），不要输入句子或符号。  
+            - **输入要求**：探索词必须是**单个中文词语**（如“警察”、“书签”），不要输入句子或符号。本实验的语义网络覆盖有限，如果你输入的词比较冷僻，系统可能会给出 0 概率。建议你使用常见的、单词形式的词语，例如日常生活中常见的物品、情绪、关系等。 
             """)
 
 # ------------------ Utils ------------------
@@ -169,8 +169,8 @@ if st.session_state.page=="intro":
     👋 欢迎参加本实验！
 
     在实验中：  
-    - **阶段一**：你会看到谜面和一个锚点词，请判断它和谜底的关系。  
-    - **阶段二**：你可以自由输入探索词，系统反馈它和谜底的连接概率。  
+    - **阶段一**：你会看到谜面和一个锚点词，请判断它和谜底的相关程度。  
+    - **阶段二**：你可以自由输入探索词，系统反馈它和谜底的相关程度。  
       每题最多输入 **30 个探索词** 或直到找到谜底。  
 
     🕒 **预计时长**：约 40 分钟。  
@@ -188,9 +188,9 @@ if st.session_state.page=="intro":
             shrink_dict = load_shrinkage(st.session_state.group)
             model = SimpleConnectionModel(load_embedding(), shrinkage_weights=shrink_dict)
             st.session_state.model = model
-            st.markdown("### 示例：连接概率演示")
+            st.markdown("### 示例：常见词汇的相关程度演示")
             for w1,w2 in [("猫","窗户"),("水","草"),("绿色","蔬菜")]:
-                st.write(f"**{w1}** 和 **{w2}** 的连接概率 = {format_prob(model.connection_probability(w1,w2))}")
+                st.write(f"**{w1}** 和 **{w2}** 的相关程度 = {format_prob(model.connection_probability(w1,w2))}")
             sheet.append_row([st.session_state.participant_id,"ORDER",
                               ",".join(map(str,ids)),st.session_state.group,
                               datetime.now().strftime("%Y-%m-%d %H:%M:%S")])
@@ -215,7 +215,7 @@ elif st.session_state.page=="prior":
     st.markdown(f"### 谜面 {st.session_state.index+1}")
     st.markdown(data["riddle_text"]); st.markdown(f"🔹 锚点词：**{data['anchor_word']}**")
     show_glossary(stage="anchor")
-    prior = st.slider("你的先验概率",0.0,1.0,0.5,0.01)
+    prior = st.slider("你认为它和谜底相关的程度是",0.0,1.0,0.5,0.01)
     if st.button("下一步"):
         st.session_state.current_prior = prior; st.session_state.page="update"
 
@@ -226,9 +226,9 @@ elif st.session_state.page=="update":
     probs = [model.connection_probability(a_word,c) for c in c_words]
     max_raw = np.max(probs)
     st.markdown(f"### 谜面 {st.session_state.index+1}（更新阶段）")
-    st.write(f"更新词：**{a_word}** → 连接概率：**{format_prob(max_raw)}**")
+    st.write(f"更新词：**{a_word}** → 它和谜底的相关程度是：**{format_prob(max_raw)}**")
     show_glossary(stage="anchor")
-    updated = st.slider("更新后的概率",0.0,1.0,0.5,0.01); conf = st.slider("信心程度",0.0,1.0,0.5,0.01)
+    updated = st.slider("你现在认为它和谜底的相关程度",0.0,1.0,0.5,0.01); conf = st.slider("信心程度",0.0,1.0,0.5,0.01)
     if st.button("提交"):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         sheet.append_row([st.session_state.participant_id,idx,"ANCHOR",
@@ -255,14 +255,14 @@ elif st.session_state.page=="explore":
     idx = st.session_state.phase2_ids[st.session_state.index]; data = riddles[idx]
     st.markdown(f"### 谜面 {st.session_state.index+1+len(st.session_state.phase1_ids)}")
     st.markdown(data["riddle_text"]); show_glossary(stage="both")
-    word = st.text_input("请输入你的探索词")
+    word = st.text_input("请输入你的探索词（你可以知道它和谜底的相关程度）")
     if st.button("提交探索词"):
         if not word.strip():
             st.warning("请输入一个词。")
         else:
             probs = [model.connection_probability(word,c) for c in data["answer_pool"]]
             max_raw = np.max(probs)
-            st.write(f"反馈：**{word}** 与谜底连接概率 = {format_prob(max_raw)}")
+            st.write(f"反馈：**{word}** 与谜底相关程度 = {format_prob(max_raw)}")
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             st.session_state.explore_count += 1
             sheet.append_row([st.session_state.participant_id,idx,"EXPLORE",
