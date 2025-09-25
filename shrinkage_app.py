@@ -142,11 +142,13 @@ def format_prob(p: float) -> str:
     elif pct > 99.99: return "≥99.99%"
     else: return f"{pct:.2f}%"
 
-def detect_group(pid: str) -> str:
+def detect_group(pid: str) -> str | None:
     pid = pid.upper()
     for g in ["FH","MH","FN","MN"]:
-        if g in pid: return g
-    return "FH"  # fallback
+        if g in pid:
+            return g
+    return None   # 不匹配就返回 None
+
 
 # ------------------ Load ------------------
 riddles = load_riddles()
@@ -180,9 +182,13 @@ if st.session_state.page=="intro":
     st.session_state.participant_id = st.text_input("请输入实验编号或随机ID")
 
     if st.button("开始实验"):
-        pid = st.session_state.participant_id.strip()
-        if pid:
-            st.session_state.group = detect_group(pid)
+    pid = st.session_state.participant_id.strip()
+    if pid:
+        group = detect_group(pid)
+        if group is None:
+            st.warning("❌ 编号中未检测到有效的分组信息（FH/MH/FN/MN），请检查后重新输入。")
+        else:
+            st.session_state.group = group
             ids = list(range(len(riddles))); random.shuffle(ids)
             st.session_state.order = ids
             st.session_state.phase1_ids = ids[:8]; st.session_state.phase2_ids = ids[8:]
@@ -195,8 +201,9 @@ if st.session_state.page=="intro":
             sheet.append_row([pid,"ORDER",",".join(map(str,ids)),st.session_state.group,
                               datetime.now().strftime("%Y-%m-%d %H:%M:%S")])
             st.session_state.page="anchor_intro"
-        else:
-            st.warning("请输入ID后才能开始。")
+    else:
+        st.warning("请输入ID后才能开始。")
+
 
 # ------------------ Section 1 ------------------
 elif st.session_state.page=="anchor_intro":
