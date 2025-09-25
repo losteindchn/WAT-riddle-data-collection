@@ -234,7 +234,9 @@ elif st.session_state.page=="update":
     a_word, c_words = data["phase1_samples"], data["answer_pool"]
     probs = [model.connection_probability(a_word,c) for c in c_words]
     max_raw = np.max(probs)
+    # 🔹 加上谜面
     st.markdown(f"### 谜面 {st.session_state.index+1}（更新阶段）")
+    st.markdown(data["riddle_text"])   # ← 这行是关键
     
     st.write(f"更新词：**{a_word}** → 它和谜底的相关程度是：**{format_prob(max_raw)}**")
     show_glossary(stage="anchor")
