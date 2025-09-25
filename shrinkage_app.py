@@ -123,7 +123,8 @@ def show_glossary(stage="both"):
             st.markdown("""
             - **锚点词**：系统提供的一个已知词，你需要判断它是否可能是谜底。  
             - **谜底词**：未知词，谜题真正的答案词。  
-            - **更新词**：系统在更新阶段提供的新词，会展示它和谜底的相关程度，来给你提示。  
+            - **更新词**：系统在更新阶段提供的新词，会展示它和谜底的相关程度，来给你提示。
+            ⚠️ 如果页面没有及时反馈，请稍等片刻重试。请不要频繁点击提交按钮。
             """)
         else:
             st.markdown(""" 
@@ -131,7 +132,7 @@ def show_glossary(stage="both"):
             - **探索词**：你自己输入的词，系统会反馈它和谜底的相关程度。  
             - **相关程度（概率值）**：显示为百分比（0%~100%）。很小时显示“≤0.01%”。  
             - **输入要求**：探索词必须是**单个中文词语**（如“书”、“糖果”），不要输入句子或符号。本实验的语义网络覆盖有限，如果你输入的词比较冷僻，系统可能会给出 0 概率。建议你使用常见的、单词形式的词语，例如日常生活中常见的物品、情绪、关系等。
-            ⚠️ 如果页面没有及时反馈，请稍等片刻重试。  
+            ⚠️ 如果页面没有及时反馈，请稍等片刻重试。请不要频繁点击提交按钮。
             """)
 
 # ------------------ Utils ------------------
@@ -228,9 +229,9 @@ elif st.session_state.page=="update":
     max_raw = np.max(probs)
     st.markdown(f"### 谜面 {st.session_state.index+1}（更新阶段）")
     
-    st.write(f"更新词：**{a_word}** → 它和谜底的相关程度是：**{format_prob(max_raw)}**")
+    st.write(f"更新词：**{a_word}** → **{a_word}**和谜底的相关程度是：**{format_prob(max_raw)}**")
     show_glossary(stage="anchor")
-    updated = st.slider("提示过后，你现在认为它和谜底的相关程度",0, 100, 50, 1, format="%d%%"); conf = st.slider("信心程度",0, 100, 50, 1, format="%d%%")
+    updated = st.slider("提示过后，你现在认为**{data['anchor_word']}**和谜底的相关程度",0, 100, 50, 1, format="%d%%"); conf = st.slider("信心程度",0, 100, 50, 1, format="%d%%")
     if st.button("提交"):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         sheet.append_row([st.session_state.participant_id,idx,"ANCHOR",
