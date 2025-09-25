@@ -229,9 +229,12 @@ elif st.session_state.page=="update":
     max_raw = np.max(probs)
     st.markdown(f"### 谜面 {st.session_state.index+1}（更新阶段）")
     
-    st.write(f"更新词：**{a_word}** → **{a_word}**和谜底的相关程度是：**{format_prob(max_raw)}**")
+    st.write(f"更新词：**{a_word}** → 它和谜底的相关程度是：**{format_prob(max_raw)}**")
     show_glossary(stage="anchor")
-    updated = st.slider("提示过后，你现在认为**{data['anchor_word']}**和谜底的相关程度",0, 100, 50, 1, format="%d%%"); conf = st.slider("信心程度",0, 100, 50, 1, format="%d%%")
+    st.write(f"🔹 锚点词：**{data['anchor_word']}**")
+    updated = st.slider(f"提示后，你现在认为 **{data['anchor_word']}** 和谜底的相关程度", 
+                        0, 100, 50, 1, format="%d%%")
+    conf = st.slider("你的信心程度", 0, 100, 50, 1, format="%d%%")
     if st.button("提交"):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         sheet.append_row([st.session_state.participant_id,idx,"ANCHOR",
