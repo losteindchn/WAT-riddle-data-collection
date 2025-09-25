@@ -182,27 +182,27 @@ if st.session_state.page=="intro":
     st.session_state.participant_id = st.text_input("请输入实验编号或随机ID")
 
     if st.button("开始实验"):
-    pid = st.session_state.participant_id.strip()
-    if pid:
-        group = detect_group(pid)
-        if group is None:
-            st.warning("❌ 编号中未检测到有效的分组信息（FH/MH/FN/MN），请检查后重新输入。")
+        pid = st.session_state.participant_id.strip()
+        if pid:
+            group = detect_group(pid)
+            if group is None:
+                st.warning("❌ 编号中未检测到有效的分组信息（FH/MH/FN/MN），请检查后重新输入。")
+            else:
+                st.session_state.group = group
+                ids = list(range(len(riddles))); random.shuffle(ids)
+                st.session_state.order = ids
+                st.session_state.phase1_ids = ids[:8]; st.session_state.phase2_ids = ids[8:]
+                shrink_dict = load_shrinkage(st.session_state.group)
+                model = SimpleConnectionModel(load_embedding(), shrinkage_weights=shrink_dict)
+                st.session_state.model = model
+                st.markdown("### 示例：一些常见单词的相关程度演示")
+                for w1,w2 in [("猫","窗户"),("水","草"),("绿色","蔬菜")]:
+                    st.write(f"**{w1}** 和 **{w2}** 的相关程度 = {format_prob(model.connection_probability(w1,w2))}")
+                sheet.append_row([pid,"ORDER",",".join(map(str,ids)),st.session_state.group,
+                                  datetime.now().strftime("%Y-%m-%d %H:%M:%S")])
+                st.session_state.page="anchor_intro"
         else:
-            st.session_state.group = group
-            ids = list(range(len(riddles))); random.shuffle(ids)
-            st.session_state.order = ids
-            st.session_state.phase1_ids = ids[:8]; st.session_state.phase2_ids = ids[8:]
-            shrink_dict = load_shrinkage(st.session_state.group)
-            model = SimpleConnectionModel(load_embedding(), shrinkage_weights=shrink_dict)
-            st.session_state.model = model
-            st.markdown("### 示例：一些常见单词的相关程度演示")
-            for w1,w2 in [("猫","窗户"),("水","草"),("绿色","蔬菜")]:
-                st.write(f"**{w1}** 和 **{w2}** 的相关程度 = {format_prob(model.connection_probability(w1,w2))}")
-            sheet.append_row([pid,"ORDER",",".join(map(str,ids)),st.session_state.group,
-                              datetime.now().strftime("%Y-%m-%d %H:%M:%S")])
-            st.session_state.page="anchor_intro"
-    else:
-        st.warning("请输入ID后才能开始。")
+            st.warning("请输入ID后才能开始。")
 
 
 # ------------------ Section 1 ------------------
